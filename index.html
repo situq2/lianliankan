@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>连连看游戏</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid black;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>写给小金鱼的小游戏，嘿嘿</h1>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const rows = 4, cols = 5, tileSize = 80;
+        canvas.width = cols * tileSize;
+        canvas.height = rows * tileSize;
+
+        let images = [
+            "1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.png", "7.png", "8.png", "9.png", "10.png"
+        ];
+        let grid = [];
+        let selected = null;
+        let imgElements = [];
+
+        function preloadImages() {
+            images.forEach((src, index) => {
+                let img = new Image();
+                img.src = src;
+                img.onload = () => {
+                    imgElements[index] = resizeImage(img, tileSize - 2, tileSize - 2);
+                };
+            });
+        }
+
+        function resizeImage(img, width, height) {
+            let offscreenCanvas = document.createElement("canvas");
+            offscreenCanvas.width = width;
+            offscreenCanvas.height = height;
+            let offscreenCtx = offscreenCanvas.getContext("2d");
+            offscreenCtx.drawImage(img, 0, 0, width, height);
+            let resizedImg = new Image();
+            resizedImg.src = offscreenCanvas.toDataURL();
+            return resizedImg;
+        }
+
+        function generateGrid() {
+            let tiles = [];
+            for (let i = 0; i < images.length; i++) {
+                tiles.push(i, i);
+            }
+            tiles.sort(() => Math.random() - 0.5);
+
+            for (let i = 0; i < rows; i++) {
+                grid[i] = [];
+                for (let j = 0; j < cols; j++) {
+                    grid[i][j] = tiles.pop();
+                }
+            }
+        }
+
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    if (grid[i][j] !== null && imgElements[grid[i][j]]) {
+                        ctx.drawImage(imgElements[grid[i][j]], j * tileSize, i * tileSize, tileSize - 2, tileSize - 2);
+                    }
+                }
+            }
+        }
+
+        function checkMatch(x1, y1, x2, y2) {
+            return grid[y1][x1] === grid[y2][x2];
+        }
+
+        canvas.addEventListener("click", function(event) {
+            let x = Math.floor(event.offsetX / tileSize);
+            let y = Math.floor(event.offsetY / tileSize);
+            if (grid[y][x] === null) return;
+
+            if (!selected) {
+                selected = { x, y };
+            } else {
+                if ((x !== selected.x || y !== selected.y) && checkMatch(selected.x, selected.y, x, y)) {
+                    grid[selected.y][selected.x] = null;
+                    grid[y][x] = null;
+                }
+                selected = null;
+            }
+            drawGrid();
+        });
+
+        preloadImages();
+        generateGrid();
+        setTimeout(drawGrid, 500); 
+    </script>
+</body>
+</html>
