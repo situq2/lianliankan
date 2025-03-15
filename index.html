@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小金鱼连连看</title>
+    <title>连连看游戏</title>
     <style>
         body {
             text-align: center;
@@ -13,7 +13,7 @@
             border: 2px solid black;
             margin-top: 20px;
         }
-        #timer, #errorCount, #message {
+        #timer, #errorCount, #message, #level {
             font-size: 20px;
             margin: 10px;
         }
@@ -21,26 +21,34 @@
             color: red;
             font-weight: bold;
         }
+        #congrats {
+            font-size: 40px;
+            color: blue;
+            font-weight: bold;
+            display: none; /* 初始隐藏 */
+        }
     </style>
 </head>
 <body>
     <h1>写给小金鱼的小游戏，嘿嘿</h1>
+    <div id="level">第 1 局：2 个相同的图片可以消除</div>
     <div id="timer">用时: 0 秒</div>
     <div id="errorCount">错误次数: 0</div>
     <div id="message"></div>
+    <div id="congrats">哇塞！你居然打通关了，你是天才吧！</div>
     <canvas id="gameCanvas"></canvas>
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const rows = 4, cols = 5, tileSize = 80;
-        canvas.width = cols * tileSize;
-        canvas.height = rows * tileSize;
-
+        const tileSize = 80;
+        let rows = 4, cols = 5; // 初始网格大小
+        let level = 1; // 当前关卡
+        let matchCount = 2; // 需要匹配的数量
         let images = [
             "1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.png", "7.png", "8.png", "9.png", "10.png"
         ];
         let grid = [];
-        let selected = null;
+        let selected = [];
         let imgElements = [];
         let startTime = null; // 游戏开始时间
         let timerInterval = null; // 计时器
@@ -73,14 +81,23 @@
         function generateGrid() {
             let tiles = [];
             for (let i = 0; i < images.length; i++) {
-                tiles.push(i, i);
+                for (let j = 0; j < matchCount; j++) {
+                    tiles.push(i); // 每个图片重复 matchCount 次
+                }
             }
             tiles.sort(() => Math.random() - 0.5);
 
+            // 动态调整网格大小
+            rows = Math.ceil(Math.sqrt(tiles.length));
+            cols = Math.ceil(tiles.length / rows);
+            canvas.width = cols * tileSize;
+            canvas.height = rows * tileSize;
+
+            grid = [];
             for (let i = 0; i < rows; i++) {
                 grid[i] = [];
                 for (let j = 0; j < cols; j++) {
-                    grid[i][j] = tiles.pop();
+                    grid[i][j] = tiles.pop() ?? null; // 如果 tiles 为空，填充 null
                 }
             }
         }
@@ -98,8 +115,10 @@
         }
 
         // 检查是否匹配
-        function checkMatch(x1, y1, x2, y2) {
-            return grid[y1][x1] === grid[y2][x2];
+        function checkMatch() {
+            if (selected.length < matchCount) return false;
+            const firstValue = grid[selected[0].y][selected[0].x];
+            return selected.every(({ x, y }) => grid[y][x] === firstValue);
         }
 
         // 更新计时器
@@ -119,21 +138,30 @@
 
         // 检查游戏是否完成
         function checkGameComplete() {
-            for (let i = 0; i < rows; i++) {
-                for (let j = 0; j < cols; j++) {
-                    if (grid[i][j] !== null) {
-                        return false; // 如果有未消除的图片，游戏未完成
-                    }
-                }
-            }
-            return true; // 所有图片已消除，游戏完成
+            return grid.every(row => row.every(cell => cell === null));
         }
 
         // 游戏完成时的处理
         function handleGameComplete() {
             clearInterval(timerInterval); // 停止计时器
             const totalTime = Math.floor((Date.now() - startTime) / 1000);
-            showMessage(`用时 ${totalTime} 秒，你打败了全世界 0.01% 的小金鱼！`);
+            const randomPercentage = (Math.random() * 100).toFixed(1); // 生成 0.0 到 100.0 的随机百分比
+showMessage(`用时 ${totalTime} 秒，你打败了全世界 ${randomPercentage}% 的小金鱼！`);
+            setTimeout(() => {
+                startNextLevel(); // 3 秒后开始下一局
+            }, 3000);
+        }
+
+        // 开始下一局
+        function startNextLevel() {
+            level++;
+            if (level > 5) {
+                document.getElementById("congrats").style.display = "block"; // 显示通关提示
+                return;
+            }
+            matchCount = level + 1; // 第 1 局：2 个，第 2 局：3 个，以此类推
+            document.getElementById("level").textContent = `第 ${level} 局：${matchCount} 个相同的图片可以消除`;
+            restartGame();
         }
 
         // 重新开始游戏
@@ -145,7 +173,6 @@
             document.getElementById("errorCount").textContent = "错误次数: 0"; // 更新错误次数显示
             generateGrid(); // 重新生成网格
             drawGrid(); // 重新绘制网格
-            showMessage("笨蛋，错两次啦，给你重开，嘿嘿"); // 显示重开消息
         }
 
         // 点击事件处理
@@ -154,12 +181,12 @@
             let y = Math.floor(event.offsetY / tileSize);
             if (grid[y][x] === null) return;
 
-            if (!selected) {
-                selected = { x, y };
-            } else {
-                if ((x !== selected.x || y !== selected.y) && checkMatch(selected.x, selected.y, x, y)) {
-                    grid[selected.y][selected.x] = null;
-                    grid[y][x] = null;
+            selected.push({ x, y });
+            if (selected.length === matchCount) {
+                if (checkMatch()) {
+                    selected.forEach(({ x, y }) => {
+                        grid[y][x] = null; // 消除选中的图片
+                    });
                     if (checkGameComplete()) {
                         handleGameComplete(); // 检查游戏是否完成
                     }
@@ -168,10 +195,9 @@
                     document.getElementById("errorCount").textContent = `错误次数: ${errorCount}`;
                     if (errorCount >= 2) {
                         restartGame(); // 重新开始游戏
-                        return;
                     }
                 }
-                selected = null;
+                selected = []; // 清空选中
             }
             drawGrid();
         });
