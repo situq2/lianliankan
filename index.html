@@ -176,6 +176,10 @@
             let y = Math.floor(event.offsetY / tileSize);
             if (grid[y][x] === null) return;
 
+            // 检查是否点击了同一位置
+            const isSamePosition = selected.some(pos => pos.x === x && pos.y === y);
+            if (isSamePosition) return; // 如果点击了同一位置，直接返回
+
             selected.push({ x, y });
             if (selected.length === matchCount) {
                 if (checkMatch()) {
