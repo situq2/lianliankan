@@ -13,7 +13,7 @@
             border: 2px solid black;
             margin-top: 20px;
         }
-        #timer, #errorCount, #message, #level {
+        #errorCount, #message, #level {
             font-size: 20px;
             margin: 10px;
         }
@@ -32,7 +32,6 @@
 <body>
     <h1>写给小金鱼的小游戏，嘿嘿</h1>
     <div id="level">第 1 局：2 个相同的图片可以消除</div>
-    <div id="timer">用时: 0 秒</div>
     <div id="errorCount">错误次数: 0</div>
     <div id="message"></div>
     <div id="congrats">哇塞！你居然打通关了，你是天才吧！</div>
@@ -121,12 +120,6 @@
             return selected.every(({ x, y }) => grid[y][x] === firstValue);
         }
 
-        // 更新计时器
-        function updateTimer() {
-            const currentTime = Math.floor((Date.now() - startTime) / 1000);
-            document.getElementById("timer").textContent = `用时: ${currentTime} 秒`;
-        }
-
         // 显示消息
         function showMessage(message) {
             const messageElement = document.getElementById("message");
@@ -146,7 +139,7 @@
             clearInterval(timerInterval); // 停止计时器
             const totalTime = Math.floor((Date.now() - startTime) / 1000);
             const randomPercentage = (Math.random() * 100).toFixed(1); // 生成 0.0 到 100.0 的随机百分比
-showMessage(`用时 ${totalTime} 秒，你打败了全世界 ${randomPercentage}% 的小金鱼！`);
+            showMessage(`用时 ${totalTime} 秒，你打败了全世界 ${randomPercentage}% 的小金鱼！`);
             setTimeout(() => {
                 startNextLevel(); // 3 秒后开始下一局
             }, 3000);
@@ -156,6 +149,8 @@ showMessage(`用时 ${totalTime} 秒，你打败了全世界 ${randomPercentage}
         function startNextLevel() {
             level++;
             if (level > 5) {
+                const totalTime = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById("congrats").textContent = `哇塞！你居然打通关了，用时 ${totalTime} 秒，你是天才吧！`;
                 document.getElementById("congrats").style.display = "block"; // 显示通关提示
                 return;
             }
@@ -168,7 +163,7 @@ showMessage(`用时 ${totalTime} 秒，你打败了全世界 ${randomPercentage}
         function restartGame() {
             clearInterval(timerInterval); // 清除计时器
             startTime = Date.now(); // 重置开始时间
-            timerInterval = setInterval(updateTimer, 1000); // 重新启动计时器
+            timerInterval = setInterval(() => {}, 1000); // 保留计时器逻辑，但不显示
             errorCount = 0; // 重置错误次数
             document.getElementById("errorCount").textContent = "错误次数: 0"; // 更新错误次数显示
             generateGrid(); // 重新生成网格
@@ -207,7 +202,7 @@ showMessage(`用时 ${totalTime} 秒，你打败了全世界 ${randomPercentage}
         generateGrid();
         setTimeout(() => {
             startTime = Date.now(); // 记录游戏开始时间
-            timerInterval = setInterval(updateTimer, 1000); // 启动计时器
+            timerInterval = setInterval(() => {}, 1000); // 保留计时器逻辑，但不显示
             drawGrid();
         }, 500);
     </script>
