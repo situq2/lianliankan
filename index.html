@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>连连看游戏</title>
+    <title>小金鱼连连看</title>
     <style>
         body {
             text-align: center;
@@ -13,10 +13,21 @@
             border: 2px solid black;
             margin-top: 20px;
         }
+        #timer, #errorCount, #message {
+            font-size: 20px;
+            margin: 10px;
+        }
+        #message {
+            color: red;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <h1>写给小金鱼的小游戏，嘿嘿</h1>
+    <div id="timer">用时: 0 秒</div>
+    <div id="errorCount">错误次数: 0</div>
+    <div id="message"></div>
     <canvas id="gameCanvas"></canvas>
     <script>
         const canvas = document.getElementById("gameCanvas");
@@ -31,7 +42,11 @@
         let grid = [];
         let selected = null;
         let imgElements = [];
+        let startTime = null; // 游戏开始时间
+        let timerInterval = null; // 计时器
+        let errorCount = 0; // 错误次数
 
+        // 预加载图片
         function preloadImages() {
             images.forEach((src, index) => {
                 let img = new Image();
@@ -42,6 +57,7 @@
             });
         }
 
+        // 调整图片大小
         function resizeImage(img, width, height) {
             let offscreenCanvas = document.createElement("canvas");
             offscreenCanvas.width = width;
@@ -53,6 +69,7 @@
             return resizedImg;
         }
 
+        // 生成游戏网格
         function generateGrid() {
             let tiles = [];
             for (let i = 0; i < images.length; i++) {
@@ -68,6 +85,7 @@
             }
         }
 
+        // 绘制游戏网格
         function drawGrid() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             for (let i = 0; i < rows; i++) {
@@ -79,10 +97,58 @@
             }
         }
 
+        // 检查是否匹配
         function checkMatch(x1, y1, x2, y2) {
             return grid[y1][x1] === grid[y2][x2];
         }
 
+        // 更新计时器
+        function updateTimer() {
+            const currentTime = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById("timer").textContent = `用时: ${currentTime} 秒`;
+        }
+
+        // 显示消息
+        function showMessage(message) {
+            const messageElement = document.getElementById("message");
+            messageElement.textContent = message;
+            setTimeout(() => {
+                messageElement.textContent = ""; // 3 秒后清除消息
+            }, 3000);
+        }
+
+        // 检查游戏是否完成
+        function checkGameComplete() {
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    if (grid[i][j] !== null) {
+                        return false; // 如果有未消除的图片，游戏未完成
+                    }
+                }
+            }
+            return true; // 所有图片已消除，游戏完成
+        }
+
+        // 游戏完成时的处理
+        function handleGameComplete() {
+            clearInterval(timerInterval); // 停止计时器
+            const totalTime = Math.floor((Date.now() - startTime) / 1000);
+            showMessage(`用时 ${totalTime} 秒，你打败了全世界 0.01% 的小金鱼！`);
+        }
+
+        // 重新开始游戏
+        function restartGame() {
+            clearInterval(timerInterval); // 清除计时器
+            startTime = Date.now(); // 重置开始时间
+            timerInterval = setInterval(updateTimer, 1000); // 重新启动计时器
+            errorCount = 0; // 重置错误次数
+            document.getElementById("errorCount").textContent = "错误次数: 0"; // 更新错误次数显示
+            generateGrid(); // 重新生成网格
+            drawGrid(); // 重新绘制网格
+            showMessage("笨蛋，错两次啦，给你重开，嘿嘿"); // 显示重开消息
+        }
+
+        // 点击事件处理
         canvas.addEventListener("click", function(event) {
             let x = Math.floor(event.offsetX / tileSize);
             let y = Math.floor(event.offsetY / tileSize);
@@ -94,15 +160,30 @@
                 if ((x !== selected.x || y !== selected.y) && checkMatch(selected.x, selected.y, x, y)) {
                     grid[selected.y][selected.x] = null;
                     grid[y][x] = null;
+                    if (checkGameComplete()) {
+                        handleGameComplete(); // 检查游戏是否完成
+                    }
+                } else {
+                    errorCount++; // 错误次数加 1
+                    document.getElementById("errorCount").textContent = `错误次数: ${errorCount}`;
+                    if (errorCount >= 2) {
+                        restartGame(); // 重新开始游戏
+                        return;
+                    }
                 }
                 selected = null;
             }
             drawGrid();
         });
 
+        // 初始化游戏
         preloadImages();
         generateGrid();
-        setTimeout(drawGrid, 500); 
+        setTimeout(() => {
+            startTime = Date.now(); // 记录游戏开始时间
+            timerInterval = setInterval(updateTimer, 1000); // 启动计时器
+            drawGrid();
+        }, 500);
     </script>
 </body>
 </html>
